@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background:    #f8fafc;
+  --foreground:    #0f172a;
+  --sidebar-bg:    #ffffff;
+  --sidebar-border:#e2e8f0;
+  --card-bg:       #ffffff;
+  --muted:         #64748b;
+  --border:        #e2e8f0;
+
+  /* Chart palette — used in all Recharts components */
+  --chart-1: #6366f1;
+  --chart-2: #8b5cf6;
+  --chart-3: #06b6d4;
+  --chart-4: #10b981;
+  --chart-5: #f59e0b;
+  --chart-axis: #94a3b8;
+  --chart-grid: #e2e8f0;
+}
+
+.dark {
+  --background:    #0f172a;
+  --foreground:    #f1f5f9;
+  --sidebar-bg:    #1e293b;
+  --sidebar-border:#334155;
+  --card-bg:       #1e293b;
+  --muted:         #94a3b8;
+  --border:        #334155;
+
+  --chart-grid: #334155;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 relative;
+  }
+  .sidebar-link-active   { @apply bg-accent/10 text-accent; }
+  .sidebar-link-inactive {
+    @apply text-slate-600 dark:text-slate-400
+           hover:bg-slate-100 dark:hover:bg-slate-800
+           hover:text-slate-900 dark:hover:text-slate-100;
+  }
+
+  /* Page-level fade-in used by layouts */
+  .page-enter {
+    animation: pageEnter 0.25s ease both;
+  }
+}
+
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
