@@ -1,8 +1,14 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { DollarSign, CheckCircle, XCircle } from "lucide-react";
+import {
+  MOCK_TRANSACTIONS,
+  MOCK_REVENUE_BY_MONTH,
+  MOCK_REVENUE_BY_PLAN,
+  MOCK_REVENUE_BY_STATUS,
+} from "@/lib/mockData";
 import * as XLSX from "xlsx";
 import StatCard from "@/components/ui/StatCard";
 import SkeletonCard from "@/components/ui/SkeletonCard";
@@ -22,57 +28,50 @@ type Transaction = {
   userId: { name: string; email: string; avatar: string };
 };
 
-type RevenueData = {
-  transactions: Transaction[];
-  totalCount: number; totalPages: number; totalRevenue: number; paidCount: number;
-  revenueByMonth: { month: string; revenue: number; count: number }[];
-  revenueByPlan: { plan: string; revenue: number; count: number }[];
-  revenueByStatus: { status: string; count: number; total: number }[];
-};
 
 export default function RevenuePage() {
-  const [range, setRange]         = useState<DateRange>({ from: subDays(new Date(), 180), to: new Date() });
-  const [plan, setPlan]           = useState("");
-  const [status, setStatus]       = useState("");
-  const [search, setSearch]       = useState("");
-  const [page, setPage]           = useState(1);
-  const [data, setData]           = useState<RevenueData | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const [range, setRange]     = useState<DateRange>({ from: subDays(new Date(), 180), to: new Date() });
+  const [plan, setPlan]       = useState("");
+  const [status, setStatus]   = useState("");
+  const [search, setSearch]   = useState("");
+  const [page, setPage]       = useState(1);
+  const [loading, setLoading] = useState(true);
 
   const debouncedSearch = useDebounce(search, 300);
 
-  const fetchData = useCallback(() => {
-    setLoading(true);
-    const q = new URLSearchParams({
-      page: String(page), limit: "10",
-      ...(range.from && { startDate: format(range.from, "yyyy-MM-dd") }),
-      ...(range.to   && { endDate:   format(range.to,   "yyyy-MM-dd") }),
-      ...(plan       && { plan }),
-      ...(status     && { status }),
-    });
-    fetch(`/api/revenue?${q}`).then((r) => r.json()).then((d) => { setData(d); setLoading(false); });
-  }, [range, plan, status, page]);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 400);
+    return () => clearTimeout(t);
+  }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { setPage(1); }, [range, plan, status, debouncedSearch]);
 
-  const paid   = data?.revenueByStatus.find((s) => s.status === "paid");
-  const failed = data?.revenueByStatus.find((s) => s.status === "failed");
+  const allFiltered = useMemo(() => {
+    return MOCK_TRANSACTIONS.filter((tx) => {
+      if (plan   && tx.plan   !== plan)   return false;
+      if (status && tx.status !== status) return false;
+      if (debouncedSearch && !tx.description.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [plan, status, debouncedSearch]);
 
-  const monthChart = useMemo(() => data?.revenueByMonth.map((m) => ({
+  const totalCount = allFiltered.length;
+  const totalPages = Math.ceil(totalCount / 10) || 1;
+  const transactions = useMemo(() => allFiltered.slice((page - 1) * 10, page * 10), [allFiltered, page]);
+
+  const paid   = MOCK_REVENUE_BY_STATUS.find((s) => s.status === "paid");
+  const failed = MOCK_REVENUE_BY_STATUS.find((s) => s.status === "failed");
+
+  const monthChart = useMemo(() => MOCK_REVENUE_BY_MONTH.map((m) => ({
     name: format(new Date(m.month + "-01"), "MMM yyyy"),
     value: m.revenue,
-  })) ?? [], [data]);
+  })), []);
 
-  const planPie   = useMemo(() => data?.revenueByPlan.map((p) => ({ name: p.plan, value: p.revenue })) ?? [], [data]);
-  const statusPie = useMemo(() => data?.revenueByStatus.map((s) => ({ name: s.status, value: s.total })) ?? [], [data]);
-
-  const filteredTx = useMemo(() => debouncedSearch
-    ? data?.transactions.filter((tx) => tx.description.toLowerCase().includes(debouncedSearch.toLowerCase())) ?? []
-    : data?.transactions ?? [], [data, debouncedSearch]);
+  const planPie   = useMemo(() => MOCK_REVENUE_BY_PLAN.map((p) => ({ name: p.plan, value: p.revenue })), []);
+  const statusPie = useMemo(() => MOCK_REVENUE_BY_STATUS.map((s) => ({ name: s.status, value: s.total })), []);
 
   const handleExport = () => {
-    const rows = filteredTx.map((tx) => ({
+    const rows = allFiltered.map((tx) => ({
       Date: format(new Date(tx.date), "yyyy-MM-dd"),
       User: tx.userId?.name ?? "",
       Email: tx.userId?.email ?? "",
@@ -117,7 +116,7 @@ export default function RevenuePage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {loading ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />) : (
           <>
-            <StatCard title="Total Revenue" value={data?.totalRevenue ?? 0}
+            <StatCard title="Total Revenue" value={182090}
               format={formatCurrency}
               icon={<DollarSign className="w-5 h-5" />} iconBg="bg-indigo-500" />
             <StatCard title="Successful Payments" value={paid?.count ?? 0}
@@ -169,9 +168,9 @@ export default function RevenuePage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredTx.length === 0 ? (
+                {transactions.length === 0 ? (
                   <tr><td colSpan={6} className="px-4 py-12 text-center text-[var(--muted)]">No transactions found.</td></tr>
-                ) : filteredTx.map((tx) => (
+                ) : transactions.map((tx) => (
                   <tr key={tx._id} className="border-b border-[var(--border)] last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                     <td className="px-4 py-3 text-[var(--muted)]">{format(new Date(tx.date), "MMM d, yyyy")}</td>
                     <td className="px-4 py-3">
@@ -190,9 +189,7 @@ export default function RevenuePage() {
             </table>
           </div>
         )}
-        {data && (
-          <Pagination page={page} totalPages={data.totalPages} totalCount={data.totalCount} limit={10} onPageChange={setPage} />
-        )}
+        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} limit={10} onPageChange={setPage} />
       </div>
     </div>
   );

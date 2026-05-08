@@ -1,7 +1,15 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns";
 import { Users, DollarSign, Activity, UserCheck } from "lucide-react";
+import {
+  MOCK_DASHBOARD_STATS,
+  MOCK_TRANSACTIONS,
+  MOCK_EVENTS_TIMELINE,
+  MOCK_TOP_PAGES,
+  MOCK_REVENUE_BY_MONTH,
+  MOCK_EVENT_TYPES,
+} from "@/lib/mockData";
 import StatCard from "@/components/ui/StatCard";
 import SkeletonCard from "@/components/ui/SkeletonCard";
 import SkeletonTable from "@/components/ui/SkeletonTable";
@@ -47,17 +55,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const from = format(subDays(new Date(), 30), "yyyy-MM-dd");
-    Promise.all([
-      fetch("/api/dashboard").then((r) => r.json()),
-      fetch("/api/revenue?limit=5&page=1").then((r) => r.json()),
-      fetch(`/api/analytics?startDate=${from}&groupBy=day`).then((r) => r.json()),
-    ]).then(([s, r, a]) => {
-      setStats(s);
-      setRevenue(r);
-      setAnalytics(a);
+    const t = setTimeout(() => {
+      setStats(MOCK_DASHBOARD_STATS);
+      setRevenue({ transactions: MOCK_TRANSACTIONS, revenueByMonth: MOCK_REVENUE_BY_MONTH });
+      setAnalytics({ eventsTimeline: MOCK_EVENTS_TIMELINE, topPages: MOCK_TOP_PAGES, eventTypes: MOCK_EVENT_TYPES });
       setLoading(false);
-    });
+    }, 400);
+    return () => clearTimeout(t);
   }, []);
 
   const revSpark   = useMemo(() => revenue?.revenueByMonth.map((m) => ({ v: m.revenue })) ?? [], [revenue]);

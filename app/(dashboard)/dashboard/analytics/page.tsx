@@ -1,7 +1,15 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { format, subDays } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import { format, subDays, startOfWeek } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import {
+  MOCK_EVENTS_TIMELINE,
+  MOCK_TOP_PAGES,
+  MOCK_DEVICE_BREAKDOWN,
+  MOCK_COUNTRY_BREAKDOWN,
+  MOCK_EVENT_TYPES,
+  MOCK_BROWSER_BREAKDOWN,
+} from "@/lib/mockData";
 import { Eye, MousePointer, Activity } from "lucide-react";
 import StatCard from "@/components/ui/StatCard";
 import SkeletonCard from "@/components/ui/SkeletonCard";
@@ -26,28 +34,50 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(() => {
-    if (!range.from) return;
+  useEffect(() => {
     setLoading(true);
-    const from = format(range.from, "yyyy-MM-dd");
-    const to   = format(range.to ?? new Date(), "yyyy-MM-dd");
-    fetch(`/api/analytics?startDate=${from}&endDate=${to}&groupBy=${groupBy}`)
-      .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); });
+    const t = setTimeout(() => {
+      setData({
+        eventsTimeline: MOCK_EVENTS_TIMELINE,
+        topPages:         MOCK_TOP_PAGES,
+        deviceBreakdown:  MOCK_DEVICE_BREAKDOWN,
+        countryBreakdown: MOCK_COUNTRY_BREAKDOWN,
+        eventTypes:       MOCK_EVENT_TYPES,
+        browserBreakdown: MOCK_BROWSER_BREAKDOWN,
+      });
+      setLoading(false);
+    }, 400);
+    return () => clearTimeout(t);
   }, [range, groupBy]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const totalViews  = data?.eventTypes.pageview ?? 0;
   const totalClicks = data?.eventTypes.click ?? 0;
   const totalEvents = useMemo(() => Object.values(data?.eventTypes ?? {}).reduce((a, b) => a + b, 0), [data]);
 
-  const timelineChart = useMemo(() => data?.eventsTimeline.map((d) => ({
-    ...d,
-    label: groupBy === "month" ? format(new Date(d.date + "-01"), "MMM yyyy")
-         : groupBy === "week"  ? `W${d.date.split("W")[1]}`
-         : format(new Date(d.date), "MMM d"),
-  })) ?? [], [data, groupBy]);
+  const timelineChart = useMemo(() => {
+    if (!data) return [];
+    if (groupBy === "day") {
+      return data.eventsTimeline.map((d) => ({ ...d, label: format(new Date(d.date), "MMM d") }));
+    }
+    if (groupBy === "week") {
+      const buckets: Record<string, { views: number; label: string }> = {};
+      data.eventsTimeline.forEach((d) => {
+        const ws = startOfWeek(new Date(d.date));
+        const key = ws.toISOString().slice(0, 10);
+        if (!buckets[key]) buckets[key] = { views: 0, label: format(ws, "MMM d") };
+        buckets[key].views += d.views;
+      });
+      return Object.entries(buckets).sort().map(([, v]) => ({ date: "", views: v.views, label: v.label }));
+    }
+    // month
+    const buckets: Record<string, { views: number; label: string }> = {};
+    data.eventsTimeline.forEach((d) => {
+      const key = d.date.slice(0, 7);
+      if (!buckets[key]) buckets[key] = { views: 0, label: format(new Date(key + "-01"), "MMM yyyy") };
+      buckets[key].views += d.views;
+    });
+    return Object.entries(buckets).sort().map(([, v]) => ({ date: "", views: v.views, label: v.label }));
+  }, [data, groupBy]);
 
   const devicePie  = useMemo(() => data?.deviceBreakdown.map((d) => ({ name: d.device,  value: d.count })) ?? [], [data]);
   const countryBar = useMemo(() => data?.countryBreakdown.map((d) => ({ name: d.country, value: d.count })) ?? [], [data]);

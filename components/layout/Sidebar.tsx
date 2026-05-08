@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
-import { motion, AnimatePresence } from "framer-motion";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -15,30 +15,28 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const navSections = [
   {
-    label: "MAIN",
+    label: 'MAIN',
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/dashboard/analytics", label: "Analytics", icon: TrendingUp },
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/dashboard/analytics', label: 'Analytics', icon: TrendingUp },
     ],
   },
   {
-    label: "MANAGEMENT",
+    label: 'MANAGEMENT',
     items: [
-      { href: "/dashboard/users", label: "Users", icon: Users },
-      { href: "/dashboard/revenue", label: "Revenue", icon: DollarSign },
-      { href: "/dashboard/reports", label: "Reports", icon: FileBarChart },
+      { href: '/dashboard/users', label: 'Users', icon: Users },
+      { href: '/dashboard/revenue', label: 'Revenue', icon: DollarSign },
+      { href: '/dashboard/reports', label: 'Reports', icon: FileBarChart },
     ],
   },
   {
-    label: "ACCOUNT",
-    items: [
-      { href: "/dashboard/settings", label: "Settings", icon: Settings },
-    ],
+    label: 'ACCOUNT',
+    items: [{ href: '/dashboard/settings', label: 'Settings', icon: Settings }],
   },
 ];
 
@@ -51,16 +49,16 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
+    href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
 
   return (
     <motion.aside
       animate={{ width: collapsed ? 64 : 260 }}
-      transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="fixed left-0 top-0 h-screen z-30 flex flex-col bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] overflow-hidden"
+      transition={{ duration: 0.25, ease: 'easeInOut' }}
+      className="fixed left-0 top-0 h-screen z-30 flex flex-col bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)]"
     >
       {/* Logo */}
-      <div className="flex items-center h-16 px-3 border-b border-[var(--sidebar-border)] shrink-0">
+      <div className="flex items-center h-16 px-3 border-b border-[var(--sidebar-border)] shrink-0 relative">
         <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0">
           <BarChart3 className="w-5 h-5 text-white" />
         </div>
@@ -68,7 +66,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {!collapsed && (
             <motion.span
               initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
+              animate={{ opacity: 1, width: 'auto' }}
               exit={{ opacity: 0, width: 0 }}
               transition={{ duration: 0.2 }}
               className="ml-3 font-bold text-slate-900 dark:text-white whitespace-nowrap overflow-hidden"
@@ -77,6 +75,18 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </motion.span>
           )}
         </AnimatePresence>
+
+        <button
+          onClick={onToggle}
+          className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white dark:bg-slate-800 border border-[var(--sidebar-border)] rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:bg-indigo-50 dark:hover:bg-slate-700 transition-all z-50"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? (
+            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+          ) : (
+            <ChevronLeft className="w-3.5 h-3.5 text-slate-500" />
+          )}
+        </button>
       </div>
 
       {/* Nav */}
@@ -106,21 +116,21 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       <Link
                         href={href}
                         className={cn(
-                          "sidebar-link",
-                          active ? "sidebar-link-active" : "sidebar-link-inactive",
-                          collapsed && "justify-center px-0"
+                          'sidebar-link',
+                          active ? 'sidebar-link-active' : 'sidebar-link-inactive',
+                          collapsed && 'justify-center px-0'
                         )}
                       >
                         {/* Active indicator */}
                         {active && (
                           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-indigo-600 rounded-r-full" />
                         )}
-                        <Icon className={cn("w-5 h-5 shrink-0", active && "text-indigo-600")} />
+                        <Icon className={cn('w-5 h-5 shrink-0', active && 'text-indigo-600')} />
                         <AnimatePresence initial={false}>
                           {!collapsed && (
                             <motion.span
                               initial={{ opacity: 0, width: 0 }}
-                              animate={{ opacity: 1, width: "auto" }}
+                              animate={{ opacity: 1, width: 'auto' }}
                               exit={{ opacity: 0, width: 0 }}
                               transition={{ duration: 0.2 }}
                               className="whitespace-nowrap overflow-hidden"
@@ -148,13 +158,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* Logout */}
-      <div className="px-2 pb-4 border-t border-[var(--sidebar-border)] pt-3 shrink-0">
+      <div className="px-2 pb-4 border-t border-[var(--sidebar-border)] pt-3 shrink-0 overflow-hidden">
         <div className="relative group">
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOut({ callbackUrl: '/login' })}
             className={cn(
-              "sidebar-link w-full sidebar-link-inactive text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40",
-              collapsed && "justify-center px-0"
+              'sidebar-link w-full sidebar-link-inactive text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40',
+              collapsed && 'justify-center px-0'
             )}
           >
             <LogOut className="w-5 h-5 shrink-0" />
@@ -162,7 +172,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               {!collapsed && (
                 <motion.span
                   initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
+                  animate={{ opacity: 1, width: 'auto' }}
                   exit={{ opacity: 0, width: 0 }}
                   transition={{ duration: 0.2 }}
                   className="whitespace-nowrap overflow-hidden"
@@ -180,19 +190,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
         </div>
       </div>
-
-      {/* Toggle button */}
-      <button
-        onClick={onToggle}
-        className="absolute -right-3 top-20 w-6 h-6 bg-white dark:bg-slate-800 border border-[var(--sidebar-border)] rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-shadow z-50"
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {collapsed ? (
-          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-        ) : (
-          <ChevronLeft className="w-3.5 h-3.5 text-slate-500" />
-        )}
-      </button>
     </motion.aside>
   );
 }

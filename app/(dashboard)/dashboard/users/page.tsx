@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback, type ChangeEvent } from "react";
+import { useState, useEffect, useMemo, type ChangeEvent } from "react";
+import { MOCK_USERS, MOCK_TRANSACTIONS } from "@/lib/mockData";
 import { format } from "date-fns";
 import { type ColumnDef, type RowSelectionState } from "@tanstack/react-table";
 import { Eye, Pencil, Trash2, Plus, X, UserX, Users } from "lucide-react";
@@ -41,9 +42,7 @@ const addSchema = z.object({
 type AddForm = z.infer<typeof addSchema>;
 
 export default function UsersPage() {
-  const [users, setUsers]                 = useState<User[]>([]);
-  const [total, setTotal]                 = useState(0);
-  const [totalPages, setTotalPages]       = useState(1);
+  const [allUsers, setAllUsers]           = useState<User[]>(() => MOCK_USERS as User[]);
   const [page, setPage]                   = useState(1);
   const [search, setSearch]               = useState("");
   const [plan, setPlan]                   = useState("");
@@ -63,55 +62,74 @@ export default function UsersPage() {
     defaultValues: { plan: "free", role: "user", status: "active" },
   });
 
-  const fetchUsers = useCallback(() => {
-    setLoading(true);
-    const q = new URLSearchParams({ page: String(page), limit: "10", search: debouncedSearch, ...(plan && { plan }), ...(status && { status }) });
-    fetch(`/api/users?${q}`)
-      .then((r) => r.json())
-      .then((d) => { setUsers(d.users ?? []); setTotal(d.totalCount ?? 0); setTotalPages(d.totalPages ?? 1); setLoading(false); });
-  }, [page, debouncedSearch, plan, status]);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(t);
+  }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
   useEffect(() => { setPage(1); }, [debouncedSearch, plan, status]);
+
+  const filteredUsers = useMemo(() => allUsers.filter((u) => {
+    const q = debouncedSearch.toLowerCase();
+    if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+    if (plan   && u.plan   !== plan)   return false;
+    if (status && u.status !== status) return false;
+    return true;
+  }), [allUsers, debouncedSearch, plan, status]);
+
+  const total      = filteredUsers.length;
+  const totalPages = Math.ceil(total / 10) || 1;
+  const users      = useMemo(() => filteredUsers.slice((page - 1) * 10, page * 10), [filteredUsers, page]);
 
   const openDrawer = (user: User) => {
     setDrawerUser(user);
     setDrawerLoading(true);
-    fetch(`/api/users/${user._id}`)
-      .then((r) => r.json())
-      .then((d) => { setDrawerUser(d); setDrawerLoading(false); });
+    setTimeout(() => {
+      const idx  = allUsers.findIndex((u) => u._id === user._id);
+      const txs  = MOCK_TRANSACTIONS.filter((_, i) => i % 7 === idx % 7).slice(0, 4) as Transaction[];
+      setDrawerUser({ ...user, transactions: txs });
+      setDrawerLoading(false);
+    }, 250);
   };
 
-  const handleDelete = async (id: string) => {
-    await fetch(`/api/users/${id}`, { method: "DELETE" });
+  const handleDelete = (id: string) => {
+    setAllUsers((prev) => prev.filter((u) => u._id !== id));
     toast.success("User deleted");
     setDeleteId(null);
     if (drawerUser?._id === id) setDrawerUser(null);
-    fetchUsers();
   };
 
-  const handleBulkDelete = async () => {
-    const ids = Object.keys(rowSelection);
-    if (!ids.length) return;
-    await Promise.all(ids.map((id) => fetch(`/api/users/${id}`, { method: "DELETE" })));
-    toast.success(`${ids.length} user(s) deleted`);
+  const handleBulkDelete = () => {
+    const ids = new Set(Object.keys(rowSelection));
+    if (!ids.size) return;
+    setAllUsers((prev) => prev.filter((u) => !ids.has(u._id)));
+    toast.success(`${ids.size} user(s) deleted`);
     setRowSelection({});
-    fetchUsers();
   };
 
-  const handleAdd = async (data: AddForm) => {
+  const handleAdd = (data: AddForm) => {
     setAddLoading(true);
-    const res = await fetch("/api/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-    if (res.ok) {
+    setTimeout(() => {
+      const newUser: User = {
+        _id: `mock_user_${Date.now()}`,
+        name: data.name,
+        email: data.email,
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name)}&background=6366f1&color=fff`,
+        role: data.role,
+        plan: data.plan,
+        status: data.status,
+        country: data.country ?? "",
+        city: data.city ?? "",
+        revenue: 0,
+        joinedAt: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString(),
+      };
+      setAllUsers((prev) => [newUser, ...prev]);
       toast.success("User created");
       setAddOpen(false);
       reset();
-      fetchUsers();
-    } else {
-      const err = await res.json();
-      toast.error(err.error ?? "Failed to create user");
-    }
-    setAddLoading(false);
+      setAddLoading(false);
+    }, 400);
   };
 
   const handleExport = () => {

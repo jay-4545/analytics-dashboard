@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import DateRangePicker from "@/components/ui/DateRangePicker";
 import Badge from "@/components/ui/Badge";
 import { formatCurrency } from "@/lib/utils";
+import { getMockUsersReport, getMockRevenueReport, getMockAnalyticsReport } from "@/lib/mockData";
 
 type ReportType = "users" | "revenue" | "analytics";
 
@@ -44,31 +45,29 @@ export default function ReportsPage() {
   const [preview, setPreview]       = useState<GeneratedReport | null>(null);
   const [history, setHistory]       = useState<GeneratedReport[]>([]);
 
-  const generate = async (type: ReportType) => {
+  const generate = (type: ReportType) => {
     const r = ranges[type];
     if (!r.from) return;
     setGenerating((prev) => ({ ...prev, [type]: true }));
-    try {
-      const q = new URLSearchParams({ type, startDate: format(r.from, "yyyy-MM-dd"), endDate: format(r.to ?? new Date(), "yyyy-MM-dd") });
-      const res  = await fetch(`/api/reports?${q}`);
-      const json = await res.json();
+    setTimeout(() => {
+      const mockFn = type === "revenue" ? getMockRevenueReport
+                   : type === "analytics" ? getMockAnalyticsReport
+                   : getMockUsersReport;
+      const json = mockFn();
       const report: GeneratedReport = {
         id: crypto.randomUUID(),
         type,
-        from: format(r.from, "yyyy-MM-dd"),
+        from: format(r.from!, "yyyy-MM-dd"),
         to:   format(r.to ?? new Date(), "yyyy-MM-dd"),
         generatedAt: new Date(),
-        summary: json.summary ?? {},
-        data: Array.isArray(json.data) ? json.data : Object.values(json.data ?? {}).flat(),
+        summary: json.summary as Record<string, unknown>,
+        data: Array.isArray(json.data) ? json.data as unknown[] : Object.values(json.data ?? {}).flat(),
       };
       setPreview(report);
       setHistory((h) => [report, ...h].slice(0, 5));
       toast.success(`${type} report generated`);
-    } catch {
-      toast.error("Failed to generate report");
-    } finally {
       setGenerating((prev) => ({ ...prev, [type]: false }));
-    }
+    }, 600);
   };
 
   const downloadPDF = async (report: GeneratedReport) => {
