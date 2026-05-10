@@ -89,12 +89,12 @@ export default function RevenuePage() {
   return (
     <div className="space-y-6 max-w-[1400px]">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-[var(--foreground)]">Revenue</h1>
           <p className="text-sm text-[var(--muted)] mt-0.5">Track payments, plans and financial trends.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <select value={plan} onChange={(e) => setPlan(e.target.value)}
             className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--card-bg)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">All Plans</option>

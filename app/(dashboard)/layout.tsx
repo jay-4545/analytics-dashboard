@@ -58,7 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="flex-1 p-6 pb-24 md:pb-6 overflow-auto"
+            className="flex-1 p-4 md:p-6 pb-24 md:pb-6 overflow-auto"
           >
             {children}
           </motion.main>

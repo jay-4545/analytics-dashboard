@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, type ChangeEvent } from "react";
+import { createPortal } from "react-dom";
 import { MOCK_USERS, MOCK_TRANSACTIONS } from "@/lib/mockData";
 import { format } from "date-fns";
 import { type ColumnDef, type RowSelectionState } from "@tanstack/react-table";
@@ -54,8 +55,15 @@ export default function UsersPage() {
   const [addOpen, setAddOpen]             = useState(false);
   const [addLoading, setAddLoading]       = useState(false);
   const [deleteId, setDeleteId]           = useState<string | null>(null);
+  const [editUser, setEditUser]           = useState<User | null>(null);
+  const [editLoading, setEditLoading]     = useState(false);
+  const [portalMounted, setPortalMounted] = useState(false);
 
   const debouncedSearch = useDebounce(search, 300);
+
+  const { register: editRegister, handleSubmit: editHandleSubmit, reset: editReset, formState: { errors: editErrors } } = useForm<AddForm>({
+    resolver: zodResolver(addSchema),
+  });
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<AddForm>({
     resolver: zodResolver(addSchema),
@@ -63,6 +71,7 @@ export default function UsersPage() {
   });
 
   useEffect(() => {
+    setPortalMounted(true);
     const t = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(t);
   }, []);
@@ -142,6 +151,36 @@ export default function UsersPage() {
     XLSX.writeFile(wb, "users-export.xlsx");
   };
 
+  const openEdit = (user: User) => {
+    setEditUser(user);
+    editReset({
+      name:    user.name,
+      email:   user.email,
+      plan:    user.plan    as AddForm["plan"],
+      role:    user.role    as AddForm["role"],
+      status:  user.status  as AddForm["status"],
+      country: user.country ?? "",
+      city:    user.city    ?? "",
+    });
+  };
+
+  const handleEdit = (data: AddForm) => {
+    if (!editUser) return;
+    setEditLoading(true);
+    setTimeout(() => {
+      setAllUsers((prev) => prev.map((u) =>
+        u._id === editUser._id
+          ? { ...u, name: data.name, email: data.email, plan: data.plan, role: data.role,
+              status: data.status, country: data.country ?? "", city: data.city ?? "" }
+          : u
+      ));
+      toast.success("User updated");
+      setEditUser(null);
+      editReset();
+      setEditLoading(false);
+    }, 400);
+  };
+
   const selectedCount = Object.keys(rowSelection).length;
 
   const columns: ColumnDef<User>[] = [
@@ -184,12 +223,31 @@ export default function UsersPage() {
       cell: ({ row: { original: u } }) => (
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <button onClick={() => openDrawer(u)} className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-[var(--muted)] hover:text-indigo-600 transition-colors"><Eye className="w-4 h-4" /></button>
-          <button className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-[var(--muted)] hover:text-amber-500 transition-colors"><Pencil className="w-4 h-4" /></button>
+          <button onClick={() => openEdit(u)} className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-[var(--muted)] hover:text-amber-500 transition-colors"><Pencil className="w-4 h-4" /></button>
           <button onClick={() => setDeleteId(u._id)} className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-[var(--muted)] hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
         </div>
       ),
     },
   ];
+
+  const editField = (label: string, name: keyof AddForm, type = "text") => (
+    <div>
+      <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{label}</label>
+      <input {...editRegister(name)} type={type}
+        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      {editErrors[name] && <p className="mt-1 text-xs text-red-500">{editErrors[name]?.message}</p>}
+    </div>
+  );
+
+  const editSel = (label: string, name: keyof AddForm, options: string[]) => (
+    <div>
+      <label className="block text-sm font-medium text-[var(--foreground)] mb-1">{label}</label>
+      <select {...editRegister(name)}
+        className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
 
   const field = (label: string, name: keyof AddForm, type = "text") => (
     <div>
@@ -212,12 +270,12 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6 max-w-[1400px]">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[var(--foreground)]">Users</h1>
           <p className="text-sm text-[var(--muted)] mt-0.5">{total} total users</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {selectedCount > 0 && (
             <button onClick={handleBulkDelete} className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-colors">
               <UserX className="w-4 h-4" /> Delete {selectedCount}
@@ -262,17 +320,18 @@ export default function UsersPage() {
         <Pagination page={page} totalPages={totalPages} totalCount={total} limit={10} onPageChange={setPage} />
       </div>
 
-      {/* Side drawer */}
-      <AnimatePresence>
-        {drawerUser && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/30 z-40" onClick={() => setDrawerUser(null)} />
-            <motion.aside
-              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 280 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-[var(--card-bg)] border-l border-[var(--border)] z-50 overflow-y-auto shadow-2xl"
-            >
+      {/* Side drawer — rendered via portal to escape Framer Motion stacking context */}
+      {portalMounted && createPortal(
+        <AnimatePresence>
+          {drawerUser && (
+            <>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/30 z-[150]" onClick={() => setDrawerUser(null)} />
+              <motion.aside
+                initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 28, stiffness: 280 }}
+                className="fixed right-0 top-0 h-full w-full max-w-md bg-[var(--card-bg)] border-l border-[var(--border)] z-[160] overflow-y-auto shadow-2xl"
+              >
               <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
                 <h2 className="font-semibold text-[var(--foreground)]">User Details</h2>
                 <button onClick={() => setDrawerUser(null)} className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -337,42 +396,89 @@ export default function UsersPage() {
             </motion.aside>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* Add User modal */}
-      <Modal open={addOpen} onClose={() => { setAddOpen(false); reset(); }} title="Add New User">
-        <form onSubmit={handleSubmit(handleAdd)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+      <Modal
+        open={addOpen}
+        onClose={() => { setAddOpen(false); reset(); }}
+        title="Add New User"
+        footer={
+          <div className="flex gap-3">
+            <button type="button" onClick={() => { setAddOpen(false); reset(); }}
+              className="flex-1 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
+            <button type="submit" form="add-user-form" disabled={addLoading}
+              className="flex-1 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50">
+              {addLoading ? "Creating…" : "Create User"}
+            </button>
+          </div>
+        }
+      >
+        <form id="add-user-form" onSubmit={handleSubmit(handleAdd)} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {field("Full Name", "name")}
             {field("Email", "email", "email")}
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {sel("Plan", "plan", ["free","pro","enterprise"])}
             {sel("Role", "role", ["admin","user","viewer"])}
             {sel("Status", "status", ["active","inactive","banned"])}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {field("Country", "country")}
             {field("City", "city")}
-          </div>
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => { setAddOpen(false); reset(); }}
-              className="flex-1 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
-            <button type="submit" disabled={addLoading}
-              className="flex-1 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50">
-              {addLoading ? "Creating…" : "Create User"}
-            </button>
           </div>
         </form>
       </Modal>
 
       {/* Confirm delete modal */}
-      <Modal open={!!deleteId} onClose={() => setDeleteId(null)} title="Delete User">
-        <p className="text-sm text-[var(--muted)] mb-5">This will permanently delete the user and all associated records. This action cannot be undone.</p>
-        <div className="flex gap-3">
-          <button onClick={() => setDeleteId(null)} className="flex-1 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
-          <button onClick={() => deleteId && handleDelete(deleteId)} className="flex-1 py-2 text-sm font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors">Delete</button>
-        </div>
+      <Modal
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        title="Delete User"
+        footer={
+          <div className="flex gap-3">
+            <button onClick={() => setDeleteId(null)} className="flex-1 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
+            <button onClick={() => deleteId && handleDelete(deleteId)} className="flex-1 py-2 text-sm font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors">Delete</button>
+          </div>
+        }
+      >
+        <p className="text-sm text-[var(--muted)]">This will permanently delete the user and all associated records. This action cannot be undone.</p>
+      </Modal>
+
+      {/* Edit User modal */}
+      <Modal
+        open={!!editUser}
+        onClose={() => { setEditUser(null); editReset(); }}
+        title="Edit User"
+        footer={
+          <div className="flex gap-3">
+            <button type="button" onClick={() => { setEditUser(null); editReset(); }}
+              className="flex-1 py-2 text-sm rounded-lg border border-[var(--border)] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
+            <button type="submit" form="edit-user-form" disabled={editLoading}
+              className="flex-1 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50">
+              {editLoading ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        }
+      >
+        <form id="edit-user-form" onSubmit={editHandleSubmit(handleEdit)} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {editField("Full Name", "name")}
+            {editField("Email", "email", "email")}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {editSel("Plan", "plan", ["free","pro","enterprise"])}
+            {editSel("Role", "role", ["admin","user","viewer"])}
+            {editSel("Status", "status", ["active","inactive","banned"])}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {editField("Country", "country")}
+            {editField("City", "city")}
+          </div>
+        </form>
       </Modal>
     </div>
   );

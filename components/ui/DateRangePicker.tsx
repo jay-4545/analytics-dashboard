@@ -42,7 +42,7 @@ export default function DateRangePicker({ range, onChange }: Props) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl shadow-xl p-3">
+        <div className="absolute right-0 top-full mt-2 z-50 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl shadow-xl p-3 max-w-[calc(100vw-2rem)]">
           <style>{`
             .rdp { --rdp-accent-color: #6366f1; --rdp-accent-background-color: #e0e7ff; }
             .dark .rdp { --rdp-accent-background-color: #312e81; }
@@ -52,7 +52,7 @@ export default function DateRangePicker({ range, onChange }: Props) {
             mode="range"
             selected={range}
             onSelect={(r) => { if (r) { onChange(r); if (r.from && r.to) setOpen(false); } }}
-            numberOfMonths={2}
+            numberOfMonths={1}
           />
         </div>
       )}

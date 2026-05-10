@@ -46,7 +46,7 @@ export default function StatCard({
   const pos = (growth ?? 0) >= 0;
 
   return (
-    <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+    <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-4 sm:p-5 flex flex-col gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
       <div className="flex items-start justify-between">
         <div className="min-w-0">
           <p className="text-sm text-[var(--muted)] font-medium truncate">{title}</p>

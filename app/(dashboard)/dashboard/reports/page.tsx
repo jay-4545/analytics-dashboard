@@ -126,14 +126,14 @@ export default function ReportsPage() {
       </div>
 
       {/* Report cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {CONFIGS.map((cfg) => (
           <div key={cfg.type} className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-5 flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${cfg.iconBg}`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 ${cfg.iconBg}`}>
                 {cfg.icon}
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-semibold text-[var(--foreground)]">{cfg.title}</h3>
                 <p className="text-xs text-[var(--muted)] mt-0.5 leading-relaxed">{cfg.description}</p>
               </div>
@@ -199,7 +199,7 @@ export default function ReportsPage() {
                 <thead>
                   <tr className="border-b border-[var(--border)]">
                     {Object.keys(preview.data[0] as Record<string, unknown>).slice(0, 7).map((k) => (
-                      <th key={k} className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide capitalize">{k.replace(/_/g, " ")}</th>
+                      <th key={k} className="px-4 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">{k.replace(/_/g, " ")}</th>
                     ))}
                   </tr>
                 </thead>
