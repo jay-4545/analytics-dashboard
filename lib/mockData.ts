@@ -18,13 +18,6 @@ function monthStr(monthsBack: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function dateInMonth(monthsBack: number, day: number): string {
-  const d = new Date();
-  d.setDate(day);
-  d.setMonth(d.getMonth() - monthsBack);
-  return d.toISOString();
-}
-
 // ─── USERS (50 mock users) ────────────────────────────────────────────────────
 
 const USER_NAMES = [

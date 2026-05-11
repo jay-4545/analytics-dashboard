@@ -22,12 +22,6 @@ import Badge, { planVariant, statusVariant } from "@/components/ui/Badge";
 import { formatCurrency } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
 
-type Transaction = {
-  _id: string; amount: number; plan: string; status: string;
-  date: string; description: string;
-  userId: { name: string; email: string; avatar: string };
-};
-
 
 export default function RevenuePage() {
   const [range, setRange]     = useState<DateRange>({ from: subDays(new Date(), 180), to: new Date() });
